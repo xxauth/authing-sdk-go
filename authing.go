@@ -10,6 +10,8 @@ import (
 	"encoding/pem"
 	"fmt"
 	"log"
+	"net/http"
+	"time"
 
 	"github.com/shurcooL/graphql"
 	"golang.org/x/oauth2"
@@ -22,6 +24,8 @@ const (
 	// Production env
 	userEndpointProdURL  = "https://core.xauth.lucfish.com/v2/graphql"
 	oauthEndpointProdURL = "https://core.xauth.lucfish.com/v2/graphql"
+
+	sdkVersion = "1.0.0"
 )
 
 const pubPEM = `
@@ -44,34 +48,54 @@ type Client struct {
 	Log func(s string)
 }
 
+type httpRoundTripper struct {
+	clientID string
+	token    string
+	r        http.RoundTripper
+}
+
+func (hrt httpRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+	r.Header.Add("Authorization", fmt.Sprintf("Bearer %s", hrt.token))
+	r.Header.Add("x-authing-sdk-version", sdkVersion)
+	r.Header.Add("x-authing-userpool-id", hrt.clientID)
+	r.Header.Add("x-authing-request-from", "sdk")
+	r.Header.Add("x-authing-app-id", "")
+	return hrt.r.RoundTrip(r)
+}
+
 // NewClient creates a new Authing user endpoint GraphQL API client
 func NewClient(clientID string, appSecret string, isDev bool) *Client {
 	c := &Client{
 		clientID: clientID,
 	}
 
-	if c.Client == nil {
-		var endpointURL string
-		if isDev {
-			endpointURL = userEndpointDevURL
-		} else {
-			endpointURL = userEndpointProdURL
-		}
-		client := graphql.NewClient(endpointURL, nil)
-		accessToken, err := getAccessTokenByAppSecret(client, clientID, appSecret)
-		if err != nil {
-			log.Println(err)
-			return nil
-		}
-
-		src := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: accessToken},
-		)
-
-		httpClient := oauth2.NewClient(context.Background(), src)
-
-		c.Client = graphql.NewClient(endpointURL, httpClient)
+	var endpointURL string
+	if isDev {
+		endpointURL = userEndpointDevURL
+	} else {
+		endpointURL = userEndpointProdURL
 	}
+	client := graphql.NewClient(endpointURL, nil)
+	accessToken, err := getAccessTokenByAppSecret(client, clientID, appSecret)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+
+	httpClient := &http.Client{
+		Timeout: time.Second * 5,
+		Transport: httpRoundTripper{
+			token:    accessToken,
+			clientID: clientID,
+			r:        http.DefaultTransport,
+		},
+	}
+
+	//src := oauth2.StaticTokenSource(
+	//	&oauth2.Token{AccessToken: accessToken},
+	//)
+	//httpClient := oauth2.NewClient(context.Background(), src)
+	c.Client = graphql.NewClient(endpointURL, httpClient)
 
 	return c
 }
