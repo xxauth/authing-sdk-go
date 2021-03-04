@@ -2,21 +2,19 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"os"
 
-	"github.com/shurcooL/graphql"
 	"github.com/xxauth/authing-sdk-go"
 )
 
 const (
-	clientID  = "5adb75e03055230001023b26"
-	appSecret = "e683d18f9d597317d43d7a6522615b9d"
+	clientID  = "44720a6b-b797-4773-9dc3-26cfa016cb56"
+	appSecret = "N7QhYtexNxWaSQswZNRsJybYMmeDtcrM"
 )
 
 func main() {
 	// ---User Endpoint
-	client := authing.NewClient(clientID, appSecret, false)
+	_ = authing.NewClient(clientID, appSecret, false)
 
 	// >>>>Graphql Mutation: register
 	// input := authing.UserRegisterInput{
@@ -34,36 +32,36 @@ func main() {
 
 	//------------------------------------------------------------------------------------
 
-	// >>>>Graphql Mutation: login
-	loginInput := authing.UserLoginInput{
-		Email:            graphql.String("kelvinji2009@gmail.com"),
-		Password:         graphql.String("password!"),
-		RegisterInClient: graphql.String(clientID),
-	}
-
-	m, err := client.Login(&loginInput)
-	if err != nil {
-		log.Println(">>>>Login failed: " + err.Error())
-	} else {
-		printJSON(m)
-	}
-
-	// userID := string(m.Login.ID) //5ae3d830f0db4b000117a95e
-	token := string(m.Login.Token)
+	//// >>>>Graphql Mutation: login
+	//loginInput := authing.UserLoginInput{
+	//	Email:            graphql.String("kelvinji2009@gmail.com"),
+	//	Password:         graphql.String("password!"),
+	//	RegisterInClient: graphql.String(clientID),
+	//}
+	//
+	//m, err := client.Login(&loginInput)
+	//if err != nil {
+	//	log.Println(">>>>Login failed: " + err.Error())
+	//} else {
+	//	printJSON(m)
+	//}
+	//
+	//// userID := string(m.Login.ID) //5ae3d830f0db4b000117a95e
+	//token := string(m.Login.Token)
 
 	//------------------------------------------------------------------------------------
 
-	// >>>>Graphql Query: checkLoginStatus
-	p := authing.CheckLoginStatusQueryParameter{
-		Token: graphql.String(token),
-	}
-
-	q, err := client.CheckLoginStatus(&p)
-	if err != nil {
-		log.Println(">>>>Check login status failed: " + err.Error())
-	} else {
-		printJSON(q)
-	}
+	//// >>>>Graphql Query: checkLoginStatus
+	//p := authing.CheckLoginStatusQueryParameter{
+	//	Token: graphql.String(token),
+	//}
+	//
+	//q, err := client.CheckLoginStatus(&p)
+	//if err != nil {
+	//	log.Println(">>>>Check login status failed: " + err.Error())
+	//} else {
+	//	printJSON(q)
+	//}
 
 	//------------------------------------------------------------------------------------
 

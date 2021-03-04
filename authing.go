@@ -123,12 +123,16 @@ func (c *Client) logf(format string, args ...interface{}) {
 // Get access token by appSeceret
 func getAccessTokenByAppSecret(client *graphql.Client, clientID string, appSecret string) (string, error) {
 	var q struct {
-		GetAccessTokenByAppSecret graphql.String `graphql:"getAccessTokenByAppSecret(secret: $secret, clientId: $id)"`
+		GetClientWhenSdkInit struct {
+			AccessToken graphql.String
+			Exp         graphql.Int
+			Iat         graphql.Int
+		} `graphql:"getClientWhenSdkInit(clientId: $clientId, secret: $secret)"`
 	}
 
 	variables := map[string]interface{}{
-		"id":     graphql.String(clientID),
-		"secret": graphql.String(appSecret),
+		"clientId": graphql.String(clientID),
+		"secret":   graphql.String(appSecret),
 	}
 
 	err := client.Query(context.Background(), &q, variables)
@@ -136,7 +140,7 @@ func getAccessTokenByAppSecret(client *graphql.Client, clientID string, appSecre
 		return "", err
 	}
 
-	accessToken := string(q.GetAccessTokenByAppSecret)
+	accessToken := string(q.GetClientWhenSdkInit.AccessToken)
 	return accessToken, err
 }
 
