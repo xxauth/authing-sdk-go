@@ -36,18 +36,6 @@ FWjSMefU8E36cHaykoi0o79qSxlpN7UPnRR1n60kRqlcM0IZ9XOlFszK05aLOrVh
 Hdspg836OaW98JYl0QIDAQAB
 -----END PUBLIC KEY-----`
 
-// Client is a client for interacting with the GraphQL API of `Authing`
-type Client struct {
-	Client *graphql.Client
-
-	clientID string
-
-	// Log is called with various debug information.
-	// To log to standard out, use:
-	//  client.Log = func(s string) { log.Println(s) }
-	Log func(s string)
-}
-
 type httpRoundTripper struct {
 	clientID string
 	token    string
@@ -61,6 +49,26 @@ func (hrt httpRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 	r.Header.Add("x-authing-request-from", "sdk")
 	r.Header.Add("x-authing-app-id", "")
 	return hrt.r.RoundTrip(r)
+}
+
+type userpoolConfig struct {
+	id        string
+	secret    string
+	jwtSecret string
+}
+
+// Client is a client for interacting with the GraphQL API of `Authing`
+type Client struct {
+	Client *graphql.Client
+
+	clientID string
+
+	config *userpoolConfig
+
+	// Log is called with various debug information.
+	// To log to standard out, use:
+	//  client.Log = func(s string) { log.Println(s) }
+	Log func(s string)
 }
 
 // NewClient creates a new Authing user endpoint GraphQL API client
@@ -96,6 +104,13 @@ func NewClient(clientID string, appSecret string, isDev bool) *Client {
 	//)
 	//httpClient := oauth2.NewClient(context.Background(), src)
 	c.Client = graphql.NewClient(endpointURL, httpClient)
+
+	config, err := getUserpoolConfig(c.Client)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+	c.config = config
 
 	return c
 }
@@ -166,6 +181,25 @@ func getAccessTokenByAppSecret(client *graphql.Client, clientID string, appSecre
 
 	accessToken := string(q.GetClientWhenSdkInit.AccessToken)
 	return accessToken, err
+}
+
+func getUserpoolConfig(client *graphql.Client) (*userpoolConfig, error) {
+	var query struct {
+		Userpool struct {
+			Secret    graphql.String
+			JwtSecret graphql.String
+		}
+	}
+	err := client.Query(context.Background(), &query, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	config := &userpoolConfig{
+		secret:    string(query.Userpool.Secret),
+		jwtSecret: string(query.Userpool.JwtSecret),
+	}
+	return config, nil
 }
 
 // Encrypt password with PKCS1v15 and encode the encrypted password by base64
