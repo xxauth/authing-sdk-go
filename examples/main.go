@@ -2,19 +2,28 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"os"
 
 	"github.com/xxauth/authing-sdk-go"
 )
 
 const (
-	clientID  = "44720a6b-b797-4773-9dc3-26cfa016cb56"
-	appSecret = "N7QhYtexNxWaSQswZNRsJybYMmeDtcrM"
+	//clientID  = "44720a6b-b797-4773-9dc3-26cfa016cb56"
+	//appSecret = "N7QhYtexNxWaSQswZNRsJybYMmeDtcrM"
+	clientID  = "bbb80e3b-1149-4f61-a7e7-da7f223213e7"
+	appSecret = "YDKrDeFf2s4NFiPGTtfWdQ7xaNsKWCjG"
 )
 
 func main() {
 	// ---User Endpoint
-	_ = authing.NewClient(clientID, appSecret, false)
+	client := authing.NewClient(clientID, appSecret, false)
+	userQuery, err := client.CheckLoginStatus("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJQb29sSWQiOiJiYmI4MGUzYi0xMTQ5LTRmNjEtYTdlNy1kYTdmMjIzMjEzZTciLCJ1c2VySWQiOiI1NzA3MzFmYi0yZjAwLTRiMzgtYTdkZC1mZDBmZTFiNmIzZWQiLCJpZCI6IjU3MDczMWZiLTJmMDAtNGIzOC1hN2RkLWZkMGZlMWI2YjNlZCIsInBob25lIjoiIiwiZW1haWwiOiIiLCJ1c2VybmFtZSI6IiIsInVuaW9uaWQiOiJvdW5wWHdjdVVsT2ktYW1sLURMN01NWU45NnJZIiwib3BlbmlkIjoib1BNZjEwQlphdU5EbEk1QzRRVnJ4M1Z3NmVhSSIsImNsaWVudElkIjoiYmJiODBlM2ItMTE0OS00ZjYxLWE3ZTctZGE3ZjIyMzIxM2U3In0sImlhdCI6MTYxNDg3MDAwNCwiZXhwIjoxNjE1NDc0ODA0fQ.wMMDDrAwXEXX-NSMy8gdOlg81M0dwsgRdGkzvRU5is0")
+	if err != nil {
+		log.Println(err.Error())
+	}
+	log.Println(fmt.Sprintf("%+v", userQuery))
 
 	// >>>>Graphql Mutation: register
 	// input := authing.UserRegisterInput{

@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"github.com/gbrlsnchs/jwt/v3"
 	"log"
 	"net/http"
 	"time"
@@ -341,43 +342,60 @@ func (c *Client) Login(input *UserLoginInput) (UserLoginMutation, error) {
 
 //------------------------------------------------------------------------------------
 
-// CheckLoginStatusQueryParameter check login status query parameters needed to fill
-type CheckLoginStatusQueryParameter struct {
-	Token graphql.String `json:"token"`
+//// CheckLoginStatusQueryParameter check login status query parameters needed to fill
+//type CheckLoginStatusQueryParameter struct {
+//	Token graphql.String `json:"token"`
+//}
+//
+//// CheckLoginStatusQuery check the login status query
+//type CheckLoginStatusQuery struct {
+//	CheckLoginStatus struct {
+//		Message graphql.String
+//		Code    graphql.Int
+//		Status  graphql.Boolean
+//	} `graphql:"checkLoginStatus(token: $token)"`
+//}
+
+type jwtData struct {
+	jwt.Payload
+	Data *jwtUserData
 }
 
-// CheckLoginStatusQuery check the login status query
-type CheckLoginStatusQuery struct {
-	CheckLoginStatus struct {
-		Message graphql.String
-		Code    graphql.Int
-		Status  graphql.Boolean
-	} `graphql:"checkLoginStatus(token: $token)"`
+type jwtUserData struct {
+	Id         string
+	UserPoolId string
+	ClientId   string
+	UserId     string
+	OpenId     string
+	UnionId    string
+	Phone      string
+	Email      string
+	Username   string
 }
 
 // CheckLoginStatus check the user login status
-func (c *Client) CheckLoginStatus(parameter *CheckLoginStatusQueryParameter) (CheckLoginStatusQuery, error) {
-	var q CheckLoginStatusQuery
+func (c *Client) CheckLoginStatus(token string) (UserQuery, error) {
+	var q UserQuery
 
-	variables := map[string]interface{}{
-		"token": parameter.Token,
+	// verify token
+	jwtData := &jwtData{}
+	if _, err := jwt.Verify([]byte(token), jwt.NewHS256([]byte(c.config.jwtSecret)), &jwtData); err != nil {
+		log.Println(fmt.Sprintf("authing check login stauts verify token error %+v", err))
+		return q, fmt.Errorf("token is invalid")
+	}
+	if jwtData.ExpirationTime == nil || jwtData.ExpirationTime.Before(time.Now()) {
+		return q, fmt.Errorf("token has expired")
 	}
 
-	err := c.Client.Query(context.Background(), &q, variables)
-	if err != nil {
-		// log.Println("Check login status failed: " + err.Error())
-		return q, err
-	}
-
-	return q, nil
+	return c.User(&UserQueryParameter{ID: graphql.String(jwtData.Data.UserId)})
 }
 
 //------------------------------------------------------------------------------------
 
 // UserQueryParameter user query parameters needed to fill
 type UserQueryParameter struct {
-	ID               graphql.String `graphql:"_id"`
-	RegisterInClient graphql.String `json:"registerInClient"`
+	ID graphql.String `graphql:"id"`
+	//RegisterInClient graphql.String `json:"registerInClient"`
 	// Token                 graphql.String  `json:"token,omitempty"` // TODO:
 	// Auth                  graphql.Boolean `json:"auth,omitempty"`
 	// UserLoginHistoryPage  graphql.Int     `json:"userLoginHistoryPage,omitempty"`
@@ -387,13 +405,16 @@ type UserQueryParameter struct {
 // UserQuery user query
 type UserQuery struct {
 	User struct {
-		ID             graphql.String `graphql:"_id"`
+		Id             graphql.String
+		Arn            graphql.String
+		UserPoolId     graphql.String
+		Username       graphql.String
 		Email          graphql.String
-		Unionid        graphql.String
 		EmailVerified  graphql.Boolean
 		Phone          graphql.String
 		PhoneVerified  graphql.Boolean
-		Username       graphql.String
+		Openid         graphql.String
+		Unionid        graphql.String
 		Nickname       graphql.String
 		Photo          graphql.String
 		Company        graphql.String
@@ -404,8 +425,14 @@ type UserQuery struct {
 		SignedUp       graphql.String
 		Blocked        graphql.Boolean
 		IsDeleted      graphql.Boolean
+		Identities     []struct {
+			Openid       graphql.String
+			Provider     graphql.String
+			AccessToken  graphql.String
+			RefreshToken graphql.String
+		}
 		// TODO: more fields from `ExtendUser`
-	} `graphql:"user(id: $id, registerInClient: $registerInClient)"` // TODO: more parameters according to schema
+	} `graphql:"user(id: $id)"` // TODO: more parameters according to schema
 }
 
 // User get the user information by user ID
@@ -413,8 +440,8 @@ func (c *Client) User(parameter *UserQueryParameter) (UserQuery, error) {
 	var q UserQuery
 
 	variables := map[string]interface{}{
-		"id":               parameter.ID,
-		"registerInClient": parameter.RegisterInClient,
+		"id": parameter.ID,
+		//"registerInClient": parameter.RegisterInClient,
 	}
 
 	err := c.Client.Query(context.Background(), &q, variables)
